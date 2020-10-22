@@ -1,6 +1,6 @@
 import React from 'react';
 import { DataConsumer } from '../../../../context/data';
-import { Table, Icon, Button } from 'semantic-ui-react';
+import { Checkbox, Button, Icon, Table } from 'semantic-ui-react';
 import { navigation } from 'nr1';
 import _ from 'lodash';
 
@@ -12,12 +12,13 @@ export default class WidgetChart extends React.Component {
       column: '',
       direction: null,
       accountId: '',
-      nrqlQuery: '',
       isLogs: '',
-      hasFacet: '',
       rowData: [],
-      trackTimestamp: 0
+      trackTimestamp: 0,
+      selectedCheckboxes: []
     };
+
+    this.handleCopyCheckbox = this.handleCopyCheckbox.bind(this);
   }
 
   componentDidUpdate() {
@@ -45,18 +46,30 @@ export default class WidgetChart extends React.Component {
         }
       }
       const { rowData, columns } = this.generateRowData(data, hasFacet);
+      // eslint-disable-next-line react/no-did-update-set-state
       this.setState({
-        data,
         accountId,
-        nrqlQuery,
         isLogs,
-        hasFacet,
         rowData,
         columns,
-        trackTimestamp: data[0].data[0].begin_time || data[0].data[0].timestamp
+        trackTimestamp: data[0].data[0].begin_time || data[0].data[0].timestamp,
+        selectedCheckboxes: Object.keys(columns)
       });
     }
   }
+
+  handleCopyCheckbox = (e, { value, checked }) => {
+    // eslint-disable-next-line react/no-access-state-in-setstate
+    const selectedCheckboxes = this.state.selectedCheckboxes;
+
+    if (checked) {
+      selectedCheckboxes.push(value);
+    } else {
+      const index = selectedCheckboxes.indexOf(value);
+      selectedCheckboxes.splice(index, 1);
+    }
+    this.setState({ selectedCheckboxes });
+  };
 
   generateRowData = (data, hasFacet) => {
     const columns = {};
@@ -184,7 +197,7 @@ export default class WidgetChart extends React.Component {
             return false;
           };
 
-          const parseBool = val => (val === 'true' ? true : false);
+            const parseBool = val => val === 'true';
 
           const viewLogs = () => {
             const logs = {
@@ -205,101 +218,121 @@ export default class WidgetChart extends React.Component {
             }
           }
 
-          return (
-            <div
-              style={{
-                maxHeight: height,
-                maxWidth: width,
-                overflow: 'auto'
-              }}
-              className="force-select"
-            >
-              {isLogs ? (
-                <div style={{ float: 'right', paddingBottom: '3px' }}>
-                  <Button content="View in Logs UI" onClick={viewLogs} />
-                </div>
-              ) : (
-                ''
-              )}
-
-              <Table
-                compact={parseBool(widgetProps.compact)}
-                singleLine={parseBool(widgetProps.singleLine)}
-                fixed={parseBool(widgetProps.fixed)}
-                striped={parseBool(widgetProps.striped)}
-                sortable
-                className="force-select"
-              >
-                <Table.Header>
-                  <Table.Row>
+            return (
+                <div
+                    style={{
+                      maxHeight: height,
+                      maxWidth: width,
+                      overflow: 'auto'
+                    }}
+                    className="force-select"
+                >
+                  {isLogs ? (
+                      <div style={{ float: 'right', paddingBottom: '3px' }}>
+                        <Button content="View in Logs UI" onClick={viewLogs} />
+                      </div>
+                  ) : (
+                      ''
+                  )}
+                  <div>
                     {Object.keys(columns).map(header => {
                       return (
-                        <Table.HeaderCell
-                          sorted={column === header ? direction : null}
-                          onClick={() => {
-                            this.toggle(header);
-                          }}
-                          key={header}
-                        >
-                          {hasFilter(header) ? (
-                            <span
-                              style={{
-                                float: 'left',
-                                maxHeight: '16px'
-                              }}
-                            >
-                              {header}&nbsp;
-                              <Icon
-                                style={{
-                                  padding: '0px',
-                                  margin: '0px',
-                                  maxHeight: '16px'
-                                }}
-                                name="filter"
-                              />
-                            </span>
-                          ) : (
-                            <span style={{ float: 'left', maxHeight: '16px' }}>
-                              {header}
-                            </span>
-                          )}
-                        </Table.HeaderCell>
+                          <span
+                              key={header}
+                              style={{ marginLeft: '5px', marginRight: '5px' }}
+                          >
+                      <Checkbox
+                          label={header}
+                          value={header}
+                          onChange={this.handleCopyCheckbox}
+                          checked={this.state.selectedCheckboxes.includes(header)}
+                      />
+                    </span>
                       );
                     })}
-                  </Table.Row>
-                </Table.Header>
-                <Table.Body>
-                  {rowData.map((r, i) => {
-                    return (
-                      <Table.Row key={i}>
-                        {Object.keys(r).map((c, z) => {
-                          let cellValue =
-                            r[c] !== null && r[c] !== undefined ? r[c] : '';
-
-                          if (c === 'timestamp') {
-                            const date = new Date(cellValue);
-                            cellValue = date.toLocaleString();
-                          }
-
+                  </div>
+                  <Table
+                      compact={parseBool(widgetProps.compact)}
+                      singleLine={parseBool(widgetProps.singleLine)}
+                      fixed={parseBool(widgetProps.fixed)}
+                      striped={parseBool(widgetProps.striped)}
+                      sortable
+                      className="force-select"
+                  >
+                    <Table.Header>
+                      <Table.Row>
+                        {this.state.selectedCheckboxes.map(header => {
                           return (
-                            <Table.Cell
-                              key={z}
-                              onClick={() => onClickTable(c, r)}
-                              className={hasFilter(c) ? 'cell-hover' : ''}
-                            >
-                              <>{cellValue}</>
-                            </Table.Cell>
+                              <Table.HeaderCell
+                                  sorted={column === header ? direction : null}
+                                  onClick={() => {
+                                    this.toggle(header);
+                                  }}
+                                  key={header}
+                              >
+                                {hasFilter(header) ? (
+                                    <span
+                                        style={{
+                                          float: 'left',
+                                          maxHeight: '16px'
+                                        }}
+                                    >
+                              {header}&nbsp;
+                                      <Icon
+                                          style={{
+                                            padding: '0px',
+                                            margin: '0px',
+                                            maxHeight: '16px'
+                                          }}
+                                          name="filter"
+                                      />
+                            </span>
+                                ) : (
+                                    <span style={{ float: 'left', maxHeight: '16px' }}>
+                              {header}
+                            </span>
+                                )}
+                              </Table.HeaderCell>
                           );
                         })}
                       </Table.Row>
-                    );
-                  })}
-                </Table.Body>
-              </Table>
-            </div>
-          );
-        }}
-      </DataConsumer>
+                    </Table.Header>
+                    <Table.Body>
+                      {rowData.map((r, i) => {
+                        return (
+                            <Table.Row key={i}>
+                              {Object.keys(r)
+                                  .filter(c => {
+                                    return this.state.selectedCheckboxes.includes(c);
+                                  })
+                                  .map((c, z) => {
+                                    let cellValue =
+                                        r[c] !== null && r[c] !== undefined ? r[c] : '';
+
+                                    if (c === 'timestamp') {
+                                      const date = new Date(cellValue);
+                                      cellValue = date.toLocaleString();
+                                    }
+
+                                    return (
+                                        <Table.Cell
+                                            key={z}
+                                            onClick={() => onClickTable(c, r)}
+                                            className={hasFilter(c) ? 'cell-hover' : ''}
+                                        >
+                                          <>{cellValue}</>
+                                        </Table.Cell>
+                                    );
+                                  })}
+                            </Table.Row>
+                        );
+                      })}
+                    </Table.Body>
+                  </Table>
+                </div>
+            );
+          }}
+        </DataConsumer>
     );
   }
 }

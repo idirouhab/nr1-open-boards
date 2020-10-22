@@ -481,6 +481,7 @@ export default class Grid extends React.Component {
             <div style={{ height: height - 61 }}>
               <GridLayout
                 className="layout"
+                isDraggable={false}
                 layout={layout}
                 cols={30}
                 rowHeight={30}
